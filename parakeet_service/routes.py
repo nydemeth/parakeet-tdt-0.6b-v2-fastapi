@@ -13,7 +13,7 @@ from .schemas import TranscriptionResponse
 from .config import logger
 
 from parakeet_service.model import reset_fast_path
-from parakeet_service.chunker import vad_chunk_lowmem, vad_chunk_streaming
+from parakeet_service.chunker import vad_chunk_lowmem, vad_chunk_streaming, chunk_by_duration
 
 
 router = APIRouter(tags=["speech"])
@@ -147,7 +147,8 @@ async def transcribe_audio(
 
     if should_chunk:
         # Use low-memory chunker for non-streaming requests
-      chunk_paths = vad_chunk_lowmem(to_model) or [to_model]
+      #chunk_paths = vad_chunk_lowmem(to_model) or [to_model]
+      chunk_paths = chunk_by_duration(to_model, 300)  or [to_model]
     else:
         chunk_paths = [to_model]
 
