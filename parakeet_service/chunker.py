@@ -150,6 +150,48 @@ def vad_chunk_streaming(path: pathlib.Path) -> List[pathlib.Path]:
                     buf.clear()
                     speech_ms = 0
 
-    if buf:
-        paths.append(_flush(buf))
-    return paths
+def chunk_by_duration(path: pathlib.Path, chunk_duration_sec: float) -> List[pathlib.Path]:
+  """
+  Simple time-based audio chunker that splits audio into fixed-length chunks.
+  
+  Args:
+      path: Path to the audio file
+      chunk_duration_sec: Duration of each chunk in seconds
+      
+  Returns:
+      List of paths to temporary WAV files containing the chunks
+  """
+  chunks = []
+  chunk_frames = int(SAMPLE_RATE * chunk_duration_sec)
+  
+  with sf.SoundFile(path) as snd:
+      file_sr = snd.samplerate
+      
+      # Process audio in chunks
+      current_chunk = bytearray()
+      frames_read = 0
+      
+      while True:
+          # Read chunk_frames worth of audio
+          audio = snd.read(frames=chunk_frames, dtype="int16", always_2d=False)
+          if not len(audio):
+              break
+              
+          # Convert to bytes and store
+          current_chunk.extend(audio.tobytes())
+          frames_read += len(audio)
+          
+          # If we've reached our chunk duration, flush to file
+          if frames_read >= chunk_frames:
+              chunks.append(_flush(current_chunk))
+              current_chunk = bytearray()
+              frames_read = 0
+      
+      # Handle any remaining audio
+      if current_chunk:
+          chunks.append(_flush(current_chunk))
+  
+  return chunks
+  if buf:
+      paths.append(_flush(buf))
+  return paths
